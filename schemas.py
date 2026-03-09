@@ -88,6 +88,21 @@ class ItemCreateSchema(Schema):
     #         should succeed with name trimmed to "Laptop"
     # ----------------------------------------------------------
 
+    @pre_load
+    def strip_name(self, data, **kwargs):
+        # Remove whitespace from the name if it exists and is not None
+        if "name" in data and data["name"] is not None:
+            data["name"] = data["name"].strip()
+        return data
+
+    @validates("name")
+    def reject_blank_name(self, value, **kwargs):
+        # Check if the name is blank after stripping whitespace and raise ValidationError if it is
+        if not value or len(value.strip()) == 0:
+            raise ValidationError("Name cannot be blank.")
+        else:
+            pass
+
     # ----------------------------------------------------------
     # TODO 2: Cross-Field Validation — discount_price <= price
     #
@@ -110,3 +125,13 @@ class ItemCreateSchema(Schema):
     #   Test: {"name": "Mouse", "price": 50, "discount_price": 100, "store_id": 1}
     #         should fail with 422
     # ----------------------------------------------------------
+
+    # Check if discount_price is greater than price and raise ValidationError if it is
+    @validates_schema
+    def check_discount(self, data, **kwargs):
+        # Get the discount_price and price from the data
+        discount = data.get("discount_price")
+        price = data.get("price")
+        # If the discount price is greater than the regular price, case should be rejected
+        if discount is not None and discount > price:
+            raise ValidationError("Discount price cannot exceed regular price.")
